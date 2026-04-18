@@ -1,0 +1,43 @@
+name: Gedamu Electronics CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        run: cd backend && npm install
+
+      - name: Verify required files
+        run: |
+          test -f frontend/index.html  && echo "✅ frontend/index.html"
+          test -f frontend/style.css   && echo "✅ frontend/style.css"
+          test -f frontend/script.js   && echo "✅ frontend/script.js"
+          test -f backend/index.js     && echo "✅ backend/index.js"
+          test -f backend/db.js        && echo "✅ backend/db.js"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm install -g @railway/cli
+          cd backend && railway up --service gedamu-backend
+        continue-on-error: true
